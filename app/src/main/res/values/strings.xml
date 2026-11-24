@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Jark\'a Yapu</string>
+    <string name="mode_offline">Modo Campo Offline</string>
+    <string name="mode_online">Modo Nube Online</string>
+    <string name="nav_diagnosis">Diagnóstico</string>
+    <string name="nav_climate">Clima</string>
+    <string name="nav_soil">Suelos</string>
+    <string name="nav_notebook">Cuaderno</string>
+    <string name="default_creator_credit">Jark\'a Yapu · Provincia Aroma</string>
+    <string name="share_chooser_title">Compartir diagnóstico agrícola</string>
+</resources>

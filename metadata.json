@@ -1,0 +1,6 @@
+{
+  "name": "Jark'a Yapu",
+  "description": "Asistente agrícola offline-first y escáner IA de plagas para la Provincia Aroma, La Paz, Bolivia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
