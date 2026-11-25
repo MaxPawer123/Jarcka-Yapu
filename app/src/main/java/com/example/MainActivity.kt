@@ -63,6 +63,7 @@ import com.example.app.configureAppCheck
 import com.example.model.AppModule
 import com.example.model.ConnectivityMode
 import com.example.ui.WeatherAlertsScreen
+import com.example.ui.camera.CropCameraScreen
 import com.example.ui.components.BrandAvatarBadge
 import com.example.ui.components.BrandCustomizationDialog
 import com.example.ui.components.ConnectivityModeSwitchPill
@@ -112,6 +113,7 @@ fun JarkaYapuApp(
     val filteredDiagnoses by viewModel.filteredLocalDiagnoses.collectAsStateWithLifecycle()
     val activeDiagnosis by viewModel.activeDiagnosis.collectAsStateWithLifecycle()
     val selectedPhotoUri by viewModel.selectedPhotoUri.collectAsStateWithLifecycle()
+    val isCameraOpen by viewModel.isCameraOpen.collectAsStateWithLifecycle()
     val farmerNote by viewModel.farmerNote.collectAsStateWithLifecycle()
     val scanUiState by viewModel.scanUiState.collectAsStateWithLifecycle()
     val savedDiagnoses by viewModel.savedDiagnoses.collectAsStateWithLifecycle()
@@ -317,6 +319,7 @@ fun JarkaYapuApp(
                                     onEnableOnlineMode = {
                                         viewModel.setConnectivityMode(ConnectivityMode.ONLINE_NUBE)
                                     },
+                                    onOpenCamera = { viewModel.openCameraX() },
                                     onPhotoSelected = { viewModel.setSelectedPhoto(it) },
                                     onFarmerNoteChange = { viewModel.updateFarmerNote(it) },
                                     onAnalyzePhoto = { viewModel.analyzeSelectedPhotoWithAi() }
@@ -377,6 +380,20 @@ fun JarkaYapuApp(
             onPickCustomLogo = { viewModel.updateCustomLogo(it) },
             onResetLogo = { viewModel.resetCustomLogo() },
             onDismiss = { showBrandDialog = false }
+        )
+    }
+
+    if (isCameraOpen) {
+        CropCameraScreen(
+            municipality = selectedMunicipality,
+            onClose = { viewModel.closeCameraX() },
+            onPhotoCaptured = { captured, analyzeImmediately ->
+                viewModel.onCameraXPhotoCaptured(
+                    uri = captured.uri,
+                    bitmap = captured.bitmap,
+                    analyzeImmediately = analyzeImmediately
+                )
+            }
         )
     }
 }

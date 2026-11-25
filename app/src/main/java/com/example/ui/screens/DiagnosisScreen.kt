@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -76,7 +75,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.example.R
 import com.example.data.LocalAgronomyDataset
@@ -99,7 +97,6 @@ import com.example.ui.theme.UrgenciaRojoFondo
 import com.example.ui.theme.VerdeBosqueAndino
 import com.example.ui.theme.VerdeHojaCultivo
 import com.example.ui.theme.VerdeMentaSuave
-import java.io.File
 
 @Composable
 fun DiagnosisScreen(
@@ -118,6 +115,7 @@ fun DiagnosisScreen(
     onClearFilters: () -> Unit,
     onOpenDiagnosis: (DiagnosisResult) -> Unit,
     onEnableOnlineMode: () -> Unit,
+    onOpenCamera: () -> Unit,
     onPhotoSelected: (Uri?) -> Unit,
     onFarmerNoteChange: (String) -> Unit,
     onAnalyzePhoto: () -> Unit
@@ -195,6 +193,7 @@ fun DiagnosisScreen(
                 farmerNote = farmerNote,
                 scanUiState = scanUiState,
                 onEnableOnlineMode = onEnableOnlineMode,
+                onOpenCamera = onOpenCamera,
                 onPhotoSelected = onPhotoSelected,
                 onFarmerNoteChange = onFarmerNoteChange,
                 onAnalyzePhoto = onAnalyzePhoto,
@@ -571,32 +570,22 @@ private fun OnlineAiScannerTab(
     farmerNote: String,
     scanUiState: ScanUiState,
     onEnableOnlineMode: () -> Unit,
+    onOpenCamera: () -> Unit,
     onPhotoSelected: (Uri?) -> Unit,
     onFarmerNoteChange: (String) -> Unit,
     onAnalyzePhoto: () -> Unit,
     onSwitchToOfflineTab: () -> Unit
 ) {
     val context = LocalContext.current
-    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
     var permissionMessage by remember { mutableStateOf<String?>(null) }
-
-    val takePictureLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success && pendingCameraUri != null) {
-            onPhotoSelected(pendingCameraUri)
-        }
-    }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            val uri = createTempPhotoUri(context)
-            pendingCameraUri = uri
-            takePictureLauncher.launch(uri)
+            onOpenCamera()
         } else {
-            permissionMessage = "Se necesita permiso de cámara para fotografiar la planta en parcela. También puedes usar Subir de Galería."
+            permissionMessage = "Se necesita permiso de cámara para abrir CameraX y fotografiar el cultivo. También puedes usar Galería."
         }
     }
 
@@ -705,9 +694,7 @@ private fun OnlineAiScannerTab(
                             Manifest.permission.CAMERA
                         ) == PackageManager.PERMISSION_GRANTED
                         if (hasCam) {
-                            val uri = createTempPhotoUri(context)
-                            pendingCameraUri = uri
-                            takePictureLauncher.launch(uri)
+                            onOpenCamera()
                         } else {
                             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                         }
@@ -917,14 +904,4 @@ private fun OnlineAiScannerTab(
             }
         }
     }
-}
-
-private fun createTempPhotoUri(context: Context): Uri {
-    val photoDir = File(context.cacheDir, "camera_photos").apply { mkdirs() }
-    val tempFile = File(photoDir, "scan_${System.currentTimeMillis()}.jpg")
-    return FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        tempFile
-    )
 }

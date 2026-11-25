@@ -1,6 +1,7 @@
 package com.example.viewmodel
 
 import android.app.Application
+import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -73,6 +74,11 @@ class JarkaYapuViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _selectedPhotoUri = MutableStateFlow<Uri?>(null)
     val selectedPhotoUri: StateFlow<Uri?> = _selectedPhotoUri.asStateFlow()
+
+    private val _capturedBitmap = MutableStateFlow<Bitmap?>(null)
+
+    private val _isCameraOpen = MutableStateFlow(false)
+    val isCameraOpen: StateFlow<Boolean> = _isCameraOpen.asStateFlow()
 
     private val _farmerNote = MutableStateFlow("")
     val farmerNote: StateFlow<String> = _farmerNote.asStateFlow()
@@ -172,8 +178,27 @@ class JarkaYapuViewModel(application: Application) : AndroidViewModel(applicatio
         _activeDiagnosis.value = null
     }
 
+    fun openCameraX() {
+        _isCameraOpen.value = true
+    }
+
+    fun closeCameraX() {
+        _isCameraOpen.value = false
+    }
+
+    fun onCameraXPhotoCaptured(uri: Uri, bitmap: Bitmap, analyzeImmediately: Boolean) {
+        _selectedPhotoUri.value = uri
+        _capturedBitmap.value = bitmap
+        _isCameraOpen.value = false
+        _scanUiState.value = ScanUiState.Idle
+        if (analyzeImmediately) {
+            analyzeSelectedPhotoWithAi()
+        }
+    }
+
     fun setSelectedPhoto(uri: Uri?) {
         _selectedPhotoUri.value = uri
+        _capturedBitmap.value = null
         _scanUiState.value = ScanUiState.Idle
     }
 
@@ -183,7 +208,8 @@ class JarkaYapuViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun analyzeSelectedPhotoWithAi() {
         val photoUri = _selectedPhotoUri.value
-        if (photoUri == null) {
+        val directBitmap = _capturedBitmap.value
+        if (photoUri == null && directBitmap == null) {
             _scanUiState.value = ScanUiState.Error("Primero toma una foto o elige una imagen de tu galería.", canRetry = false)
             return
         }
@@ -205,11 +231,23 @@ class JarkaYapuViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             _scanUiState.value = ScanUiState.Loading
             try {
-                val result = geminiVisionService.analyzeCropPhoto(
-                    imageUri = photoUri,
-                    municipality = _selectedMunicipality.value,
-                    farmerNote = _farmerNote.value
-                )
+                val result = if (directBitmap != null) {
+                    val prompt = geminiVisionService.buildAgronomyPrompt(
+                        municipality = _selectedMunicipality.value,
+                        farmerNote = _farmerNote.value
+                    )
+                    geminiVisionService.diagnoseCropFromBitmap(
+                        bitmap = directBitmap,
+                        prompt = prompt,
+                        photoUri = photoUri?.toString()
+                    )
+                } else {
+                    geminiVisionService.analyzeCropPhoto(
+                        imageUri = photoUri!!,
+                        municipality = _selectedMunicipality.value,
+                        farmerNote = _farmerNote.value
+                    )
+                }
                 _scanUiState.value = ScanUiState.Success(result)
                 _activeDiagnosis.value = result
             } catch (e: CancellationException) {
